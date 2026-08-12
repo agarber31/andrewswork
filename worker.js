@@ -208,23 +208,6 @@ async function handleApi(request, env, pathname) {
   return json({ error: "Not found." }, 404);
 }
 
-const HTML = String.raw`<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="color-scheme" content="light" />
-<title>Andrew's Work</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<style>${CSS}</style>
-</head>
-<body>
-${BODY}
-<script>${JS}</script>
-</body>
-</html>`;
 
 const CSS = `
 /* ─────────────────────────────────────────────────────────────
@@ -1588,3 +1571,21 @@ function renderTimelog(){
 
 load();
 `;
+
+const HTML = String.raw`<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="color-scheme" content="light" />
+<title>Andrew's Work</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>${CSS}</style>
+</head>
+<body>
+${BODY}
+<script>${JS}</script>
+</body>
+</html>`;
