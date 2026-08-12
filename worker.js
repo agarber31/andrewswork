@@ -209,9 +209,11 @@ async function handleApi(request, env, pathname) {
   if (pathname === "/api/timer/start" && method === "POST") {
     const denied = await requireOwner(request, data); if (denied) return denied;
     const body = await request.json().catch(() => ({}));
-    if (!body.taskId || !taskFor(data, body.taskId)) return json({ error: "Valid taskId required." }, 400);
+    const taskId = body.taskId && taskFor(data, body.taskId) ? body.taskId : null;
+    const label = (body.label || "").trim().slice(0, 200) || null;
+    if (!taskId && !label) return json({ error: "Pick a task or type what you're working on." }, 400);
     if (data.activeTimer) return json({ error: "A timer is already running." }, 400);
-    data.activeTimer = { taskId: body.taskId, start: new Date().toISOString() };
+    data.activeTimer = { taskId, label, start: new Date().toISOString() };
     await saveData(env, data);
     return json({ ok: true });
   }
@@ -222,8 +224,15 @@ async function handleApi(request, env, pathname) {
     const start = new Date(data.activeTimer.start);
     const end = new Date();
     const minutes = Math.max(1, Math.round((end - start) / 60000));
-    data.timeLogs.unshift({ id: uid(), taskId: data.activeTimer.taskId, start: data.activeTimer.start, end: end.toISOString(), minutes, note: (body.note || "").trim().slice(0, 300) });
+    data.timeLogs.unshift({ id: uid(), taskId: data.activeTimer.taskId, label: data.activeTimer.label, start: data.activeTimer.start, end: end.toISOString(), minutes, note: (body.note || "").trim().slice(0, 300) });
     data.activeTimer = null;
+    await saveData(env, data);
+    return json({ ok: true });
+  }
+  if (pathname.match(/^\/api\/timelogs\/[^/]+$/) && method === "DELETE") {
+    const denied = await requireOwner(request, data); if (denied) return denied;
+    const id = pathname.split("/").pop();
+    data.timeLogs = data.timeLogs.filter((l) => l.id !== id);
     await saveData(env, data);
     return json({ ok: true });
   }
@@ -793,10 +802,9 @@ button{font-family:var(--sans); cursor:pointer; border:none;}
   font-weight:600; font-size:14px;
 }
 .dash-nav .brand .mark{
-  width:24px; height:24px; border-radius:6px;
-  background: linear-gradient(135deg, var(--accent), #7c3aed);
-  display:flex; align-items:center; justify-content:center;
-  color:#fff; font-weight:700; font-size:12px;
+  width:24px; height:24px; border-radius:50%;
+  object-fit:cover; object-position:center 22%;
+  box-shadow: 0 0 0 1px var(--border);
 }
 .dash-nav .brand .sub{
   color:var(--ink-3); font-weight:400;
@@ -977,7 +985,7 @@ button{font-family:var(--sans); cursor:pointer; border:none;}
 
 .log-list{max-height: 480px; overflow-y:auto;}
 .log-row{
-  display:grid; grid-template-columns: 56px 1fr auto; gap:12px;
+  display:grid; grid-template-columns: 56px 1fr auto auto; gap:12px;
   padding: 10px 0; align-items:start;
   border-bottom: 1px dashed var(--border);
 }
@@ -1044,7 +1052,7 @@ const BODY = `
 
   <nav class="dash-nav">
     <div class="brand">
-      <div class="mark">A</div>
+      <img class="mark" src="${PROFILE_IMG}" alt="Andrew Ryan Garber" />
       Andrew's Work <span class="sub" id="dash-role-label">Admin</span>
     </div>
     <div class="spacer"></div>
@@ -1426,11 +1434,12 @@ function renderClock(){
   const isOwner = ROLE === 'owner';
   if (DATA.activeTimer){
     const task = DATA.tasks.find(t=>t.id===DATA.activeTimer.taskId);
+    const name = task ? escapeHtml(task.text) : (DATA.activeTimer.label ? escapeHtml(DATA.activeTimer.label) : '(untitled)');
     el.innerHTML = \`
       <div>
         <div class="label"><span class="live-dot"></span>Timer running · since \${timeOf(DATA.activeTimer.start)}</div>
         <div class="display" id="timer-elapsed">00:00:00</div>
-        <div class="task-name">\${task ? escapeHtml(task.text) : '(unknown task)'}</div>
+        <div class="task-name">\${name}</div>
       </div>
       \${isOwner ? \`<div class="controls">
         <button class="btn stop" onclick="stopTimer()">Stop &amp; log</button>
@@ -1440,11 +1449,13 @@ function renderClock(){
       <div>
         <div class="label">Time clock — idle</div>
         <div class="display idle">00:00:00</div>
-        <div class="task-name idle">Pick a task and start the clock</div>
+        <div class="task-name idle">Type what you're doing, or pick a task — either works</div>
       </div>
       <div class="controls">
+        <input id="timer-label" placeholder="What are you working on? (optional if you pick a task)" style="min-width:220px;" />
         <select id="timer-task">
-          \${DATA.tasks.filter(t=>t.status!=='completed').map(t=>\`<option value="\${t.id}">\${escapeHtml(t.text)}</option>\`).join('') || '<option>No open tasks</option>'}
+          <option value="">No task — just log this</option>
+          \${DATA.tasks.filter(t=>t.status!=='completed').map(t=>\`<option value="\${t.id}">\${escapeHtml(t.text)}</option>\`).join('')}
         </select>
         <button class="btn primary" onclick="startTimer()">Start</button>
       </div>\`;
@@ -1460,9 +1471,12 @@ function renderClock(){
 
 async function startTimer(){
   const sel = document.getElementById('timer-task');
-  const taskId = sel && sel.value;
-  if (!taskId) { toast('Add an open task first'); return; }
-  await api('/api/timer/start', { method:'POST', body: JSON.stringify({ taskId }) });
+  const labelInput = document.getElementById('timer-label');
+  const taskId = sel && sel.value ? sel.value : null;
+  const label = labelInput ? labelInput.value.trim() : '';
+  if (!taskId && !label) { toast('Type what you are working on, or pick a task'); return; }
+  const res = await api('/api/timer/start', { method:'POST', body: JSON.stringify({ taskId, label }) });
+  if (!res.ok) { toast('Could not start timer'); return; }
   await load();
 }
 async function stopTimer(){
@@ -1600,17 +1614,27 @@ function renderTimelog(){
   }).join('');
 
   const list = document.getElementById('timelog-list');
+  const isOwner = ROLE === 'owner';
   list.innerHTML = logs.length ? logs.slice(0,30).map(l => {
     const task = DATA.tasks.find(t=>t.id===l.taskId);
+    const title = task ? escapeHtml(task.text) : (l.label ? escapeHtml(l.label) : (l.taskId ? '(deleted task)' : '(no task)'));
     return \`<div class="log-row">
       <div class="dur-chip">\${(l.minutes/60).toFixed(1)}h</div>
       <div class="body">
-        <div class="task">\${task?escapeHtml(task.text):'(deleted task)'}</div>
+        <div class="task">\${title}</div>
         \${l.note?'<div class="note">'+escapeHtml(l.note)+'</div>':''}
       </div>
       <div class="when">\${shortDate(l.start)}</div>
+      \${isOwner ? \`<button class="btn subtle xs" title="Delete entry" onclick="delTimeLog('\${l.id}')">✕</button>\` : ''}
     </div>\`;
   }).join('') : '<div class="panel-empty">No time logged yet.</div>';
+}
+
+async function delTimeLog(id){
+  const res = await api('/api/timelogs/'+id, { method:'DELETE' });
+  if (!res.ok) { toast('Could not delete entry'); return; }
+  await load();
+  toast('Entry deleted');
 }
 
 load();
