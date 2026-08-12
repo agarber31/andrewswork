@@ -56,8 +56,23 @@ export default {
 };
 
 async function handleApi(request, env, pathname) {
-  const data = await getData(env);
   const method = request.method;
+
+  // TEMPORARY DEBUG ROUTE — remove after troubleshooting. Checked before any KV access
+  // so it still works even if the KV binding itself is the problem.
+  if (pathname === "/api/debug-env" && method === "GET") {
+    return json({
+      hasAdminPasscode: !!env.ADMIN_PASSCODE,
+      hasTeamPasscode: !!env.TEAM_PASSCODE,
+      hasKvBinding: !!(env.SITE_DATA && typeof env.SITE_DATA.get === "function"),
+    });
+  }
+
+  if (!env.SITE_DATA || typeof env.SITE_DATA.get !== "function") {
+    return json({ error: "SITE_DATA KV binding is missing on this Worker." }, 500);
+  }
+
+  const data = await getData(env);
   const role = getRole(request, data);
 
   if (pathname === "/api/data" && method === "GET") {
