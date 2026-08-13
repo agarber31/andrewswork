@@ -1,0 +1,8 @@
+# Copy this file to .dev.vars (already gitignored) and fill in real values
+# for local development with `wrangler dev`. In production these are set
+# with `wrangler secret put <NAME>` instead — see README.md.
+
+ADMIN_PASSCODE=1234
+TEAM_PASSCODE=5678
+GA4_SERVICE_ACCOUNT_KEY={"type":"service_account","project_id":"...","private_key":"...","client_email":"..."}
+OPENAI_API_KEY=sk-...
