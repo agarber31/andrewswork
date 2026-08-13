@@ -965,6 +965,10 @@ button{font-family:var(--sans); cursor:pointer; border:none;}
 }
 
 .dash-shell{max-width:1400px; margin:0 auto; padding: 24px 24px 100px;}
+@media (max-width: 760px){
+  /* Mobile dashboard: only the time clock + time log stay visible */
+  .mobile-hide{display:none !important;}
+}
 
 /* Timer hero */
 .timer-hero{
@@ -1213,7 +1217,7 @@ var BODY = `
     <div class="timer-hero" id="clock-widget"></div>
 
     <!-- Log activity + Add task -->
-    <div class="section owner-only" style="margin-bottom:20px;">
+    <div class="section owner-only mobile-hide" style="margin-bottom:20px;">
       <div class="section-header">
         <div class="heading"><h2>Log a session</h2></div>
       </div>
@@ -1225,7 +1229,7 @@ var BODY = `
       </div>
     </div>
 
-    <div class="section">
+    <div class="section mobile-hide">
       <div class="section-header">
         <div class="heading"><h2>Tasks</h2></div>
       </div>
@@ -1261,7 +1265,7 @@ var BODY = `
     </section>
 
     <!-- Activity log -->
-    <section class="section" style="margin-top:32px;">
+    <section class="section mobile-hide" style="margin-top:32px;">
       <div class="section-header">
         <div class="heading">
           <h2>Activity</h2>
@@ -1280,7 +1284,7 @@ var BODY = `
     </section>
 
     <!-- Notepad -->
-    <section class="section" style="margin-top:32px;">
+    <section class="section mobile-hide" style="margin-top:32px;">
       <div class="section-header">
         <div class="heading"><h2>Notepad</h2></div>
       </div>
@@ -1294,7 +1298,7 @@ var BODY = `
     </section>
 
     <!-- Notebook (multi-doc) -->
-    <section class="section" style="margin-top:32px;">
+    <section class="section mobile-hide" style="margin-top:32px;">
       <div class="section-header">
         <div class="heading"><h2>Notebook</h2></div>
         <span style="font-size:12px;color:var(--ink-3);" id="notebook-save-state">&nbsp;</span>
@@ -1499,7 +1503,7 @@ document.addEventListener('keydown', (e) => {
   spaceCount++;
   clearTimeout(spaceTimer);
   spaceTimer = setTimeout(() => spaceCount = 0, 1500);
-  if (spaceCount >= 3) { spaceCount = 0; triggerReveal(); }
+  if (spaceCount >= 2) { spaceCount = 0; triggerReveal(); }
 });
 let touchPath = [];
 document.addEventListener('touchstart', (e) => { touchPath = [{x:e.touches[0].clientX, y:e.touches[0].clientY}]; });
