@@ -1,6 +1,6 @@
 {
   "name": "andrews-work",
-  "main": "src/worker.js",
+  "main": "worker.js",
   "compatibility_date": "2026-08-01",
 
   // Two KV namespaces are required. Create them with:
