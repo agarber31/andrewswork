@@ -16,15 +16,15 @@
   //   npx wrangler kv namespace create TOKEN_CACHE
   // Paste each real "id" below — these must NOT be left as placeholders.
   "kv_namespaces": [
-    { "binding": "SITE_DATA", "id": "REPLACE_WITH_SITE_DATA_KV_ID" },
-    { "binding": "TOKEN_CACHE", "id": "REPLACE_WITH_TOKEN_CACHE_KV_ID" }
+    { "binding": "SITE_DATA", "id": "46ee89c447134417988afc578b87c6e0" },
+    { "binding": "TOKEN_CACHE", "18b063361d2b4f8a9e7222808a29c628" }
   ],
 
   // Non-secret config. Secrets (passcodes, API keys) are set separately in
   // Cloudflare dashboard -> data-tracking -> Settings -> Variables and
   // Secrets, and must NOT be added here since this file is committed.
   "vars": {
-    "GA4_PROPERTY_ID": "REPLACE_WITH_YOUR_GA4_PROPERTY_ID",
+    "GA4_PROPERTY_ID": "280166345",
     "TOOL_LAUNCH_DATE": "2026-08-07"
   }
 
