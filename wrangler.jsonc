@@ -17,7 +17,7 @@
   // Paste each real "id" below — these must NOT be left as placeholders.
   "kv_namespaces": [
     { "binding": "SITE_DATA", "id": "46ee89c447134417988afc578b87c6e0" },
-    { "binding": "TOKEN_CACHE", "18b063361d2b4f8a9e7222808a29c628" },
+    { "binding": "TOKEN_CACHE", "18b063361d2b4f8a9e7222808a29c628" }
   ],
 
   // Non-secret config. Secrets (passcodes, API keys) are set separately in
