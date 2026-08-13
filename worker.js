@@ -145,13 +145,11 @@ async function handleApi(request, env, pathname) {
     const denied = await requireOwner(request, data);
     if (denied) return denied;
     const body = await request.json().catch(() => ({}));
-    if (!body.text?.trim()) return json({ error: "Text required." }, 400);
     const startedAt = body.startedAt || (/* @__PURE__ */ new Date()).toISOString();
     const endedAt = body.endedAt || (/* @__PURE__ */ new Date()).toISOString();
     let duration = Number.isFinite(body.duration) ? body.duration : Math.max(1, Math.round((new Date(endedAt) - new Date(startedAt)) / 6e4));
     data.activity.unshift({
       id: uid(),
-      text: body.text.trim(),
       startedAt,
       endedAt,
       duration,
@@ -183,8 +181,6 @@ async function handleApi(request, env, pathname) {
     const id = pathname.split("/").pop();
     if (method === "DELETE") {
       data.tasks = data.tasks.filter((t) => t.id !== id);
-      data.timeLogs = data.timeLogs.filter((l) => l.taskId !== id);
-      if (data.activeTimer?.taskId === id) data.activeTimer = null;
       await saveData(env, data);
       return json({ ok: true });
     }
@@ -251,12 +247,8 @@ async function handleApi(request, env, pathname) {
   if (pathname === "/api/timer/start" && method === "POST") {
     const denied = await requireOwner(request, data);
     if (denied) return denied;
-    const body = await request.json().catch(() => ({}));
-    const taskId = body.taskId && taskFor(data, body.taskId) ? body.taskId : null;
-    const label = (body.label || "").trim().slice(0, 200) || null;
-    if (!taskId && !label) return json({ error: "Pick a task or type what you're working on." }, 400);
     if (data.activeTimer) return json({ error: "A timer is already running." }, 400);
-    data.activeTimer = { taskId, label, start: (/* @__PURE__ */ new Date()).toISOString() };
+    data.activeTimer = { start: (/* @__PURE__ */ new Date()).toISOString() };
     await saveData(env, data);
     return json({ ok: true });
   }
@@ -264,11 +256,10 @@ async function handleApi(request, env, pathname) {
     const denied = await requireOwner(request, data);
     if (denied) return denied;
     if (!data.activeTimer) return json({ error: "No timer running." }, 400);
-    const body = await request.json().catch(() => ({}));
     const start = new Date(data.activeTimer.start);
     const end = /* @__PURE__ */ new Date();
     const minutes = Math.max(1, Math.round((end - start) / 6e4));
-    data.timeLogs.unshift({ id: uid(), taskId: data.activeTimer.taskId, label: data.activeTimer.label, start: data.activeTimer.start, end: end.toISOString(), minutes, note: (body.note || "").trim().slice(0, 300) });
+    data.timeLogs.unshift({ id: uid(), start: data.activeTimer.start, end: end.toISOString(), minutes });
     data.activeTimer = null;
     await saveData(env, data);
     return json({ ok: true });
@@ -678,7 +669,7 @@ body{
 }
 .activity-head, .activity-row{
   display:grid;
-  grid-template-columns: 140px 140px 84px 1fr 90px;
+  grid-template-columns: 140px 140px 84px 1fr;
   gap:16px; align-items:center;
   padding: 10px 20px;
 }
@@ -712,10 +703,6 @@ body{
   padding: 3px 8px; background: var(--accent-soft);
   color: var(--accent-ink);
   border-radius:5px; text-align:center; justify-self:start;
-}
-.activity-row .what{
-  color:var(--ink); font-size:13px; line-height:1.4;
-  text-wrap:pretty;
 }
 .activity-row .rel{
   font-family:var(--mono); font-size:11px;
@@ -1143,8 +1130,8 @@ button{font-family:var(--sans); cursor:pointer; border:none;}
 
 .log-list{max-height: 480px; overflow-y:auto;}
 .log-row{
-  display:grid; grid-template-columns: 56px 1fr auto auto; gap:12px;
-  padding: 10px 0; align-items:start;
+  display:grid; grid-template-columns: 56px 1fr auto; gap:12px;
+  padding: 10px 0; align-items:center;
   border-bottom: 1px dashed var(--border);
 }
 .log-row:last-child{border-bottom:none;}
@@ -1154,8 +1141,6 @@ button{font-family:var(--sans); cursor:pointer; border:none;}
   padding: 4px 8px; border-radius:5px; text-align:center;
   font-variant-numeric: tabular-nums;
 }
-.log-row .body .task{font-size:13px; color:var(--ink); font-weight:500;}
-.log-row .body .note{font-size:12px; color:var(--ink-3); margin-top:2px;}
 .log-row .when{
   font-family:var(--mono); font-size:10.5px; color:var(--ink-4);
   text-align:right; font-variant-numeric: tabular-nums;
@@ -1232,8 +1217,7 @@ var BODY = `
       <div class="section-header">
         <div class="heading"><h2>Log a session</h2></div>
       </div>
-      <div class="quick-add" style="grid-template-columns: 1fr 120px 120px 90px auto;">
-        <input id="activity-text" placeholder="What did you work on?" />
+      <div class="quick-add" style="grid-template-columns: 140px 140px 100px auto;">
         <input id="activity-start" type="time" title="Start" />
         <input id="activity-end" type="time" title="End" />
         <input id="activity-dur" type="number" placeholder="Min" title="Duration (min) \u2014 leave blank to auto-calc" />
@@ -1289,7 +1273,6 @@ var BODY = `
           <div>Start</div>
           <div>End</div>
           <div>Duration</div>
-          <div>What</div>
           <div style="text-align:right;">When</div>
         </div>
         <div id="activity-list"></div>
@@ -1596,7 +1579,6 @@ function renderActivityLog(){
       <div class="time"><span>\${timeOf(start)}</span><span class="day">\${dayOf(start)}</span></div>
       <div class="time"><span>\${timeOf(end)}</span>\${sameDay ? '' : '<span class="day">'+dayOf(end)+'</span>'}</div>
       <div class="duration">\${fmtDur(dur)}</div>
-      <div class="what">\${escapeHtml(a.text)}</div>
       <div class="rel">\${relTime(start)}</div>
     </div>\`;
   }).join('') : '<div class="activity-empty">No sessions logged yet.</div>';
@@ -1606,13 +1588,10 @@ function renderClock(){
   const el = document.getElementById('clock-widget');
   const isOwner = ROLE === 'owner';
   if (DATA.activeTimer){
-    const task = DATA.tasks.find(t=>t.id===DATA.activeTimer.taskId);
-    const name = task ? escapeHtml(task.text) : (DATA.activeTimer.label ? escapeHtml(DATA.activeTimer.label) : '(untitled)');
     el.innerHTML = \`
       <div>
         <div class="label"><span class="live-dot"></span>Timer running \xB7 since \${timeOf(DATA.activeTimer.start)}</div>
         <div class="display" id="timer-elapsed">00:00:00</div>
-        <div class="task-name">\${name}</div>
       </div>
       \${isOwner ? \`<div class="controls">
         <button class="btn stop" onclick="stopTimer()">Stop &amp; log</button>
@@ -1622,14 +1601,8 @@ function renderClock(){
       <div>
         <div class="label">Time clock \u2014 idle</div>
         <div class="display idle">00:00:00</div>
-        <div class="task-name idle">Type what you're doing, or pick a task \u2014 either works</div>
       </div>
       <div class="controls">
-        <input id="timer-label" placeholder="What are you working on? (optional if you pick a task)" style="min-width:220px;" />
-        <select id="timer-task">
-          <option value="">No task \u2014 just log this</option>
-          \${DATA.tasks.filter(t=>t.status!=='completed').map(t=>\`<option value="\${t.id}">\${escapeHtml(t.text)}</option>\`).join('')}
-        </select>
         <button class="btn primary" onclick="startTimer()">Start</button>
       </div>\`;
   } else {
@@ -1637,24 +1610,17 @@ function renderClock(){
       <div>
         <div class="label">Time clock \u2014 idle</div>
         <div class="display idle">00:00:00</div>
-        <div class="task-name idle">Nothing running right now</div>
       </div>\`;
   }
 }
 
 async function startTimer(){
-  const sel = document.getElementById('timer-task');
-  const labelInput = document.getElementById('timer-label');
-  const taskId = sel && sel.value ? sel.value : null;
-  const label = labelInput ? labelInput.value.trim() : '';
-  if (!taskId && !label) { toast('Type what you are working on, or pick a task'); return; }
-  const res = await api('/api/timer/start', { method:'POST', body: JSON.stringify({ taskId, label }) });
+  const res = await api('/api/timer/start', { method:'POST' });
   if (!res.ok) { toast('Could not start timer'); return; }
   await load();
 }
 async function stopTimer(){
-  const note = prompt('What did you work on?') || '';
-  await api('/api/timer/stop', { method:'POST', body: JSON.stringify({ note }) });
+  await api('/api/timer/stop', { method:'POST' });
   await load();
   toast('Time entry logged');
 }
@@ -1712,11 +1678,9 @@ async function toggleSubtask(taskId, subId, done){
 
 /* Log an activity session with start/end/duration */
 async function addActivity(){
-  const text = document.getElementById('activity-text').value.trim();
   const startVal = document.getElementById('activity-start').value; // "HH:MM"
   const endVal   = document.getElementById('activity-end').value;
   const durVal   = document.getElementById('activity-dur').value;
-  if (!text) { toast('Add a description'); return; }
 
   const today = new Date();
   function toISO(hm){
@@ -1747,8 +1711,7 @@ async function addActivity(){
     duration = duration || 1;
   }
 
-  await api('/api/activity', { method:'POST', body: JSON.stringify({ text, startedAt, endedAt, duration }) });
-  document.getElementById('activity-text').value = '';
+  await api('/api/activity', { method:'POST', body: JSON.stringify({ startedAt, endedAt, duration }) });
   document.getElementById('activity-start').value = '';
   document.getElementById('activity-end').value = '';
   document.getElementById('activity-dur').value = '';
@@ -1789,14 +1752,8 @@ function renderTimelog(){
   const list = document.getElementById('timelog-list');
   const isOwner = ROLE === 'owner';
   list.innerHTML = logs.length ? logs.slice(0,30).map(l => {
-    const task = DATA.tasks.find(t=>t.id===l.taskId);
-    const title = task ? escapeHtml(task.text) : (l.label ? escapeHtml(l.label) : (l.taskId ? '(deleted task)' : '(no task)'));
     return \`<div class="log-row">
       <div class="dur-chip">\${(l.minutes/60).toFixed(1)}h</div>
-      <div class="body">
-        <div class="task">\${title}</div>
-        \${l.note?'<div class="note">'+escapeHtml(l.note)+'</div>':''}
-      </div>
       <div class="when">\${shortDate(l.start)}</div>
       \${isOwner ? \`<button class="btn subtle xs" title="Delete entry" onclick="delTimeLog('\${l.id}')">\u2715</button>\` : ''}
     </div>\`;
