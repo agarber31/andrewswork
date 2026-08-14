@@ -23,6 +23,7 @@ function uid() {
 }
 __name(uid, "uid");
 var PROFILE_IMG = "/profile.jpg";
+var FAVICON_IMG = "/favicon.png";
 async function getData(env) {
   const raw = await env.SITE_DATA.get("site-data");
   if (!raw) return structuredClone(DEFAULT_DATA);
@@ -929,9 +930,11 @@ button{font-family:var(--sans); cursor:pointer; border:none;}
 .dash-nav .brand{
   display:flex; align-items:center; gap:10px;
   font-weight:600; font-size:14px;
+  flex-shrink:0;
 }
 .dash-nav .brand .mark{
-  width:24px; height:24px; border-radius:50%;
+  width:24px; height:24px; min-width:24px; min-height:24px;
+  border-radius:50%; flex-shrink:0;
   object-fit:cover; object-position:center 22%;
   box-shadow: 0 0 0 1px var(--border);
 }
@@ -970,6 +973,13 @@ button{font-family:var(--sans); cursor:pointer; border:none;}
 @media (max-width: 760px){
   /* Mobile dashboard: only the time clock + time log stay visible */
   .mobile-hide{display:none !important;}
+}
+@media (max-width: 640px){
+  /* Keep the logo + name pinned at full size; let the rest of the nav
+     scroll horizontally instead of squeezing the logo into an oval. */
+  .dash-nav{gap:12px; padding:0 16px; overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch;}
+  .dash-nav::-webkit-scrollbar{display:none;}
+  .dash-nav .brand .sub{display:none;}
 }
 
 /* Timer hero */
@@ -1836,7 +1846,7 @@ var HTML = String.raw(_a || (_a = __template([`<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta name="color-scheme" content="light" />
 <title>Andrew's Work</title>
-<link rel="icon" type="image/jpeg" href="/profile.jpg" />
+<link rel="icon" type="image/png" href="${FAVICON_IMG}" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -2559,9 +2569,10 @@ body{
   -webkit-backdrop-filter: saturate(180%) blur(12px);
   border-bottom:1px solid var(--border);
 }
-.dash-nav .brand{display:flex; align-items:center; gap:10px; font-weight:600; font-size:14px;}
+.dash-nav .brand{display:flex; align-items:center; gap:10px; font-weight:600; font-size:14px; flex-shrink:0;}
 .dash-nav .brand .mark{
-  width:24px; height:24px; border-radius:50%;
+  width:24px; height:24px; min-width:24px; min-height:24px;
+  border-radius:50%; flex-shrink:0;
   object-fit:cover; object-position:center 22%;
   box-shadow: 0 0 0 1px var(--border);
 }
@@ -2603,6 +2614,13 @@ body{
   animation: pulse 2.4s infinite;
 }
 @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.5;}}
+@media (max-width: 640px){
+  /* Keep the logo + name pinned at full size; let the rest of the nav
+     scroll horizontally instead of squeezing the logo into an oval. */
+  .dash-nav{gap:12px; padding:0 16px; overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch;}
+  .dash-nav::-webkit-scrollbar{display:none;}
+  .dash-nav .brand .sub{display:none;}
+}
 
 input[type=text], input[type=password], input:not([type]){
   font-family:var(--sans); font-size:13px;
@@ -3482,7 +3500,7 @@ const ANALYTICS_HTML = String.raw(_b || (_b = __template([`<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta name="color-scheme" content="light" />
 <title>Analytics · Andrew's Work</title>
-<link rel="icon" type="image/jpeg" href="/profile.jpg" />
+<link rel="icon" type="image/png" href="${FAVICON_IMG}" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
